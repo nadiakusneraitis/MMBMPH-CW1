@@ -9,3 +9,72 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Mathematical Modelling in Biology, Medicine & Public Health CW1 
+
+## Appendix A
+
+### Q4 (iii)
+Below I execute the method I proposed and described in my written answer to Q4(iii) for estimating the identifiable parameters. 
+
+```{r}
+data <- read.csv("data.csv")
+colnames(data) <- c("t", "y_squared")
+
+model_function <- function(t, lambda1, lambda2) {
+  ((exp(lambda1 * t) - exp(lambda2 * t)) / (lambda1 - lambda2))^2
+}
+
+# initial starting guesses for the algorithm: lambda1=0.5 (growth rate, positive); lambda2=-0.1 (decay rate, negative)
+fit <- nls(y_squared ~ model_function(t, lambda1, lambda2), 
+           data = data, 
+           start = list(lambda1 = 0.5, lambda2 = -0.1))
+
+summary(fit)
+```
+
+### Q4 (iv)
+First I fit an exponential model, again using NLLS.
+
+```{r}
+# starting values: c represents a growth rate, so  I start it near the lambda1 value found in (iii)
+exp_fit <- nls(y_squared ~ a + b * exp(c * t), 
+               data = data, 
+               start = list(a = 0, b = 0.1, c = 0.2))
+
+summary(exp_fit)
+```
+
+Next I fit a polynomial of degree 2 using the linear model function.
+
+```{r}
+# y_squared = B0 + B1*t + B2*t^2
+poly_fit <- lm(y_squared ~ poly(t, 2, raw = TRUE), data = data)
+
+summary(poly_fit)
+```
+
+Plotting the fittings:
+
+```{r}
+t_seq <- data.frame(t = seq(min(data$t), max(data$t), length.out = 100))
+
+pred_mech <- predict(fit, newdata = t_seq)
+pred_exp  <- predict(exp_fit, newdata = t_seq)
+pred_poly <- predict(poly_fit, newdata = t_seq)
+
+plot(data$t, data$y_squared,
+main = "Comparison of Epidemic Model Fits",
+xlab = "Time t (days)",
+ylab = "Squared Incidence",
+pch = 16, col = "darkgray")
+
+lines(t_seq$t, pred_mech, col = "blue", lwd = 2, lty = 1)
+lines(t_seq$t, pred_exp, col = "red", lwd = 2, lty = 2)
+lines(t_seq$t, pred_poly, col = "darkgreen", lwd = 2, lty = 3)
+
+legend("topleft",
+legend = c("Mechanistic", "Exponential", "Quadratic"),
+col = c("blue", "red", "darkgreen"),
+lwd = 2, lty = c(1, 2, 3), bty = "n")
+```
+
